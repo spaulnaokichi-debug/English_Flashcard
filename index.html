@@ -1,0 +1,1778 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>英単語フラッシュカード</title>
+  <style>
+    :root {
+      --bg-outer: #e5e7eb;
+      --bg-app: #f2f2f7;
+      --surface: #ffffff;
+      --border: #e5e5ea;
+      --text: #1c1c1e;
+      --muted: #6e6e73;
+      --blue: #007aff;
+      --blue-soft: #eef6ff;
+      --green: #34c759;
+      --green-soft: #eafaf0;
+      --red: #ff3b30;
+      --red-soft: #ffefee;
+      --radius-lg: 18px;
+      --radius-md: 12px;
+      --radius-sm: 9px;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      min-height: 100dvh;
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+      background: var(--bg-outer);
+      color: var(--text);
+    }
+
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .app-frame {
+      width: 100%;
+      max-width: 430px;
+      height: 100dvh;
+      max-height: 880px;
+      background: var(--bg-app);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.14);
+    }
+
+    @media (min-width: 460px) {
+      body {
+        padding: 12px;
+      }
+      .app-frame {
+        height: 92dvh;
+        border-radius: 38px;
+        border: 8px solid #1c1c1e;
+      }
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    /* 共通ヘッダー */
+    .top-bar {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      flex-shrink: 0;
+      min-height: 52px;
+    }
+
+    .top-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .top-title {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 800;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .top-progress {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--blue);
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .nav-btn {
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--blue);
+      border-radius: var(--radius-sm);
+      padding: 6px 10px;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .nav-btn:active {
+      opacity: 0.7;
+    }
+
+    .reset-btn {
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--muted);
+      border-radius: var(--radius-sm);
+      padding: 6px 9px;
+      font-family: inherit;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .reset-btn.armed {
+      background: var(--red);
+      border-color: var(--red);
+      color: #fff;
+    }
+
+    /* トースト通知 */
+    .toast {
+      position: absolute;
+      top: 58px;
+      left: 14px;
+      right: 14px;
+      z-index: 30;
+      background: rgba(28, 28, 30, 0.94);
+      color: #fff;
+      padding: 10px 14px;
+      border-radius: var(--radius-md);
+      font-size: 12.5px;
+      font-weight: 700;
+      text-align: center;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+      pointer-events: none;
+    }
+
+    /* 画面コンテナ */
+    .screen {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      padding: 12px 14px;
+      gap: 10px;
+      overflow: hidden;
+    }
+
+    /* ==================== 1. トピック選択画面 ==================== */
+    .topic-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 6px;
+    }
+
+    .topic-card {
+      width: 100%;
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 18px 16px;
+      text-align: left;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+      transition: transform 0.1s ease, border-color 0.15s ease;
+    }
+
+    .topic-card:active {
+      transform: scale(0.985);
+      border-color: var(--blue);
+    }
+
+    .topic-name {
+      font-size: 19px;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+
+    .topic-counts {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .badge-ok {
+      background: var(--green-soft);
+      color: #1e8e3e;
+      padding: 4px 10px;
+      border-radius: 999px;
+    }
+
+    .badge-ng {
+      background: var(--red-soft);
+      color: #d93025;
+      padding: 4px 10px;
+      border-radius: 999px;
+    }
+
+    .topic-chevron {
+      font-size: 20px;
+      font-weight: 700;
+      color: #c7c7cc;
+    }
+
+    /* ==================== 2. メニュー画面 ==================== */
+    .summary-bar {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 9px 12px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .summary-cell {
+      text-align: center;
+      font-size: 13px;
+      font-weight: 800;
+      padding: 5px 6px;
+      border-radius: 8px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .summary-cell.ok {
+      background: var(--green-soft);
+      color: #1e8e3e;
+    }
+
+    .summary-cell.ng {
+      background: var(--red-soft);
+      color: #d93025;
+    }
+
+    .mode-buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .mode-btn {
+      border: none;
+      border-radius: var(--radius-md);
+      padding: 13px 8px;
+      font-family: inherit;
+      font-size: 13.5px;
+      font-weight: 800;
+      color: #fff;
+      cursor: pointer;
+      text-align: center;
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+    }
+
+    .mode-btn:active {
+      transform: scale(0.98);
+    }
+
+    .mode-btn.full {
+      background: var(--blue);
+    }
+
+    .mode-btn.unknown-only {
+      background: var(--red);
+    }
+
+    /* 単語リスト */
+    .list-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 10px;
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .list-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .list-title {
+      margin: 0;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .filter-pills {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 4px;
+      background: var(--bg-app);
+      padding: 3px;
+      border-radius: 10px;
+      flex-shrink: 0;
+    }
+
+    .filter-pill {
+      border: none;
+      background: transparent;
+      border-radius: 8px;
+      padding: 6px 4px;
+      font-family: inherit;
+      font-size: 11.5px;
+      font-weight: 800;
+      color: var(--muted);
+      cursor: pointer;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .filter-pill.active {
+      background: var(--surface);
+      color: var(--text);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    }
+
+    .word-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      overflow-y: auto;
+      flex: 1;
+      border-top: 1px solid var(--border);
+    }
+
+    .word-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 8px 2px;
+      border-bottom: 1px solid #f2f2f7;
+    }
+
+    .word-info {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .word-en {
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .word-idx {
+      font-size: 11px;
+      color: var(--muted);
+      margin-right: 5px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .word-ja {
+      font-size: 11.5px;
+      color: var(--muted);
+      margin-top: 1px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .row-toggles {
+      display: flex;
+      gap: 5px;
+      flex-shrink: 0;
+    }
+
+    .toggle-btn {
+      width: 30px;
+      height: 28px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #f9f9fb;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 800;
+      cursor: pointer;
+      color: var(--muted);
+    }
+
+    .toggle-btn.ok.active {
+      background: var(--green);
+      border-color: var(--green);
+      color: #fff;
+    }
+
+    .toggle-btn.ng.active {
+      background: var(--red);
+      border-color: var(--red);
+      color: #fff;
+    }
+
+    /* ==================== 3. フラッシュカード画面 ==================== */
+    .cards-grid {
+      flex: 1;
+      min-height: 0;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      grid-template-rows: repeat(5, 1fr);
+      gap: 7px;
+    }
+
+    .flash-card {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 13px;
+      padding: 5px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 0;
+      transition: border-color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .flash-card.is-known {
+      border-color: #a3e6b8;
+      background: #f7fdf9;
+    }
+
+    .flash-card.is-unknown {
+      border-color: #ffc2be;
+      background: #fffafa;
+    }
+
+    .card-face {
+      flex: 1;
+      min-height: 0;
+      perspective: 900px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .card-inner {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      transition: transform 0.36s cubic-bezier(0.22, 1, 0.36, 1);
+      transform-style: preserve-3d;
+    }
+
+    .card-face.is-flipped .card-inner {
+      transform: rotateY(180deg);
+    }
+
+    .card-side {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 4px 6px;
+      border-radius: 9px;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+    }
+
+    .card-side.front {
+      background: #ffffff;
+    }
+
+    .card-side.back {
+      background: var(--blue-soft);
+      transform: rotateY(180deg);
+    }
+
+    .sound-btn {
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      border-radius: var(--radius-sm);
+      padding: 5px 8px;
+      font-family: inherit;
+      font-size: 13px;
+      line-height: 1;
+      cursor: pointer;
+    }
+
+    .sound-btn.muted {
+      opacity: 0.45;
+    }
+
+    .face-en {
+      font-size: 13.5px;
+      font-weight: 800;
+      color: var(--text);
+      line-height: 1.2;
+      word-break: break-word;
+    }
+
+    .face-ja {
+      font-size: 12px;
+      font-weight: 700;
+      color: #0051a8;
+      line-height: 1.25;
+      word-break: break-word;
+    }
+
+    .card-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5px;
+      margin-top: 4px;
+      flex-shrink: 0;
+    }
+
+    .grade-btn {
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 4px 0;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 800;
+      cursor: pointer;
+      background: #f8f8fa;
+      color: var(--muted);
+    }
+
+    .grade-btn:active {
+      transform: scale(0.95);
+    }
+
+    .grade-btn.ok {
+      color: var(--green);
+      border-color: #bcebd0;
+      background: var(--green-soft);
+    }
+
+    .grade-btn.ok.active {
+      background: var(--green);
+      border-color: var(--green);
+      color: #fff;
+    }
+
+    .grade-btn.ng {
+      color: var(--red);
+      border-color: #ffccc9;
+      background: var(--red-soft);
+    }
+
+    .grade-btn.ng.active {
+      background: var(--red);
+      border-color: var(--red);
+      color: #fff;
+    }
+
+    .study-footer {
+      display: grid;
+      grid-template-columns: 1fr 1.15fr;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .flip-all-btn {
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      border-radius: var(--radius-md);
+      padding: 12px 8px;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .flip-all-btn:active {
+      background: #e5e5ea;
+    }
+
+    .next-btn {
+      border: none;
+      background: var(--blue);
+      color: #fff;
+      border-radius: var(--radius-md);
+      padding: 12px;
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0, 122, 255, 0.25);
+    }
+
+    .next-btn:active {
+      transform: scale(0.98);
+    }
+  </style>
+</head>
+<body>
+  <div class="app-frame">
+    <!-- ヘッダー -->
+    <header class="top-bar">
+      <div class="top-left">
+        <button id="backBtn" type="button" class="nav-btn hidden">← トピック選択</button>
+        <h1 id="headerTitle" class="top-title">英単語フラッシュカード</h1>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span id="headerProgress" class="top-progress hidden"></span>
+        <button id="soundToggleBtn" type="button" class="sound-btn hidden" aria-label="効果音切替">🔊</button>
+        <button id="resetBtn" type="button" class="reset-btn hidden">履歴リセット</button>
+      </div>
+    </header>
+
+    <!-- トースト通知 -->
+    <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+
+    <!-- ==================== 1. トピック選択画面 ==================== -->
+    <section id="topicScreen" class="screen" aria-label="トピック選択画面">
+      <div class="topic-list">
+        <button id="eikenTopicBtn" type="button" class="topic-card">
+          <div>
+            <div class="topic-name">英検準1級（50語）</div>
+            <div class="topic-counts">
+              <span class="badge-ok">○ <span id="eikenOkCount">0</span></span>
+              <span class="badge-ng">× <span id="eikenNgCount">50</span></span>
+            </div>
+          </div>
+          <span class="topic-chevron">›</span>
+        </button>
+
+        <button id="ieltsTopicBtn" type="button" class="topic-card">
+          <div>
+            <div class="topic-name">IELTS（50語）</div>
+            <div class="topic-counts">
+              <span class="badge-ok">○ <span id="ieltsOkCount">0</span></span>
+              <span class="badge-ng">× <span id="ieltsNgCount">50</span></span>
+            </div>
+          </div>
+          <span class="topic-chevron">›</span>
+        </button>
+
+        <button id="slangTopicBtn" type="button" class="topic-card">
+          <div>
+            <div class="topic-name">英語スラング（300語）</div>
+            <div class="topic-counts">
+              <span class="badge-ok">○ <span id="slangOkCount">0</span></span>
+              <span class="badge-ng">× <span id="slangNgCount">300</span></span>
+            </div>
+          </div>
+          <span class="topic-chevron">›</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- ==================== 2. メニュー画面 ==================== -->
+    <section id="menuScreen" class="screen hidden" aria-label="メニュー画面">
+      <div class="summary-bar">
+        <div class="summary-cell ok">○ 覚えた: <span id="menuOkCount">0</span>語</div>
+        <div class="summary-cell ng">× 覚えてない: <span id="menuNgCount">50</span>語</div>
+      </div>
+
+      <div class="mode-buttons">
+        <button id="fullModeBtn" type="button" class="mode-btn full">総復習モード</button>
+        <button id="unknownModeBtn" type="button" class="mode-btn unknown-only">覚えてないもの復習モード</button>
+      </div>
+
+      <div class="list-card">
+        <div class="list-header">
+          <h2 id="listTitle" class="list-title">全50語リスト（意味順）</h2>
+        </div>
+
+        <div class="filter-pills" role="tablist">
+          <button id="filterAllBtn" type="button" class="filter-pill active" data-filter="all">すべて (50)</button>
+          <button id="filterOkBtn" type="button" class="filter-pill" data-filter="known">○ 覚えた (0)</button>
+          <button id="filterNgBtn" type="button" class="filter-pill" data-filter="unknown">× 覚えてない (50)</button>
+        </div>
+
+        <ul id="wordList" class="word-list"></ul>
+      </div>
+    </section>
+
+    <!-- ==================== 3. フラッシュカード学習画面 ==================== -->
+    <section id="studyScreen" class="screen hidden" aria-label="10枚フラッシュカード画面">
+      <div id="cardsGrid" class="cards-grid"></div>
+
+      <div class="study-footer">
+        <button id="flipAllBtn" type="button" class="flip-all-btn">すべて裏返す / 表に戻す</button>
+        <button id="nextBtn" type="button" class="next-btn">次へ</button>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      // =========================================================================
+      // 1. 英検準1級（50語・意味の近い順：増減・変化 → 評価・批判 → 論理・証明 → 規則・権限 → 感情・行動）
+      // =========================================================================
+      const EIKEN_RAW = [
+        // 増減・変化（10語）
+        "surge|急増する",
+        "escalate|段階的に拡大する",
+        "proliferate|急増する、拡散する",
+        "dwindle|次第に減少する",
+        "diminish|減らす、弱める",
+        "plummet|急落する",
+        "fluctuate|変動する",
+        "subside|静まる、減少する",
+        "revive|復活させる",
+        "abolish|廃止する",
+        // 評価・批判（10語）
+        "endorse|支持する、推奨する",
+        "commend|称賛する",
+        "revere|深く尊敬する",
+        "scrutinize|綿密に調べる",
+        "reproach|非難する、とがめる",
+        "condemn|強く非難する",
+        "denounce|公然と非難する",
+        "detrimental|有害な",
+        "obsolete|時代遅れの、廃れた",
+        "mediocre|並みの、平凡な",
+        // 論理・証明（10語）
+        "substantiate|実証する、裏付ける",
+        "corroborate|裏付ける、確証する",
+        "deduce|推論する",
+        "postulate|仮定する",
+        "ambiguous|曖昧な",
+        "obscure|不明瞭な、覆い隠す",
+        "contradict|矛盾する、反論する",
+        "refute|反証する、論破する",
+        "coherent|首尾一貫した",
+        "valid|妥当な、有効な",
+        // 規則・権限（10語）
+        "mandate|権限、命令する",
+        "decree|法令、布告する",
+        "comply|従う、遵守する",
+        "infringe|侵害する、違反する",
+        "exempt|免除された",
+        "autonomy|自治、自主性",
+        "jurisdiction|管轄権",
+        "arbitrary|任意の、独断的な",
+        "coerce|強制する",
+        "sanction|制裁、認可",
+        // 感情・行動（10語）
+        "reluctant|気が進まない",
+        "apprehensive|不安な、懸念して",
+        "indifferent|無関心な",
+        "resilient|回復力のある",
+        "perseverance|忍耐力",
+        "complacent|自己満足した",
+        "impulsive|衝動的な",
+        "reckless|無謀な",
+        "cautious|慎重な",
+        "diligent|勤勉な"
+      ].join("\n");
+
+      // =========================================================================
+      // 2. IELTS（50語・意味の近い順：学術・分析 → 社会・経済 → 環境・科学 → 傾向・変化 → 議論・合意）
+      // =========================================================================
+      const IELTS_RAW = [
+        // 学術・分析（10語）
+        "hypothesis|仮説",
+        "methodology|方法論",
+        "criterion|基準、規範",
+        "parameter|指標、制限範囲",
+        "empirical|経験的な、実証的な",
+        "qualitative|質的な",
+        "quantitative|量的な",
+        "correlation|相関関係",
+        "anomaly|異常、変則",
+        "synthesis|統合、総合",
+        // 社会・経済（10語）
+        "infrastructure|社会基盤、インフラ",
+        "urbanization|都市化",
+        "demographic|人口統計の",
+        "affluent|裕福な、豊かな",
+        "disparity|格差、不均衡",
+        "subsidy|補助金、助成金",
+        "incentive|動機づけ、優遇措置",
+        "commodity|商品、日用品",
+        "tariff|関税",
+        "recession|景気後退、不況",
+        // 環境・科学（10語）
+        "ecosystem|生態系",
+        "biodiversity|生物多様性",
+        "sustainable|持続可能な",
+        "renewable|再生可能な",
+        "emission|排出、放出",
+        "contamination|汚染",
+        "deforestation|森林伐採",
+        "erosion|浸食、衰退",
+        "depletion|枯渇、消耗",
+        "mitigate|緩和する、軽減する",
+        // 傾向・変化（10語）
+        "trajectory|軌道、推移",
+        "surge|急増する、急騰",
+        "stagnate|停滞する",
+        "deteriorate|悪化する",
+        "transition|移行、過渡期",
+        "catalyst|触媒、きっかけ",
+        "prevalent|広く普及している",
+        "unprecedented|前例のない",
+        "inevitable|避けられない",
+        "marginal|わずかな、周辺的な",
+        // 議論・合意（10語）
+        "advocate|提唱する、擁護者",
+        "proponent|支持者、提案者",
+        "skeptical|懐疑的な",
+        "controversial|議論を呼ぶ",
+        "consensus|合意、意見の一致",
+        "compromise|妥協する",
+        "plausible|もっともらしい",
+        "coherent|首尾一貫した",
+        "intrinsic|固有の、本質的な",
+        "implication|影響、含意"
+      ].join("\n");
+
+      // =========================================================================
+      // 3. 英語スラング（300語・意味の近い順：10カテゴリ×各30語）
+      // =========================================================================
+      const SLANG_RAW = [
+        // 1. 最高・称賛（30語）
+        "lit|最高に盛り上がっている",
+        "fire|めちゃくちゃかっこいい、最高",
+        "dope|イケてる、最高",
+        "sick|最高にヤバい、かっこいい",
+        "slay|圧倒する、最高にキメる",
+        "nailed it|完璧にやり遂げた",
+        "legit|本物の、マジで最高",
+        "goat|史上最高",
+        "banger|最高にノれる曲、傑作",
+        "ace|最高、達人",
+        "epic|最高にすごい、壮大な",
+        "killer|抜群にかっこいい、最高",
+        "rad|かっこいい、最高",
+        "gnarly|すごい、イカつい",
+        "bomb|最高、超イケてる",
+        "mint|新品同様、完璧な",
+        "top-notch|一流の、最高級の",
+        "on point|完璧な、的を射た",
+        "on fleek|バッチリ決まっている",
+        "bussin|めちゃくちゃ美味しい、最高",
+        "slaps|最高にイイ（曲や食べ物）",
+        "hits different|格別に良い、心に刺さる",
+        "chef's kiss|文句なしの完璧さ",
+        "valid|イケてる、認められる",
+        "clutch|土壇場で決める、頼りになる",
+        "mvp|一番の功労者",
+        "boss|すごい人、イケてる人",
+        "legend|伝説級にすごい人",
+        "badass|最高にかっこいい人",
+        "icon|憧れの存在、カリスマ",
+        // 2. 最悪・批判（30語）
+        "suck|最悪である、下手である",
+        "lame|ダサい、つまらない",
+        "cringe|痛々しい、見ていて恥ずかしい",
+        "trash|ゴミ、酷評する",
+        "cheesy|安っぽい、ベタな",
+        "sketchy|怪しい、危険そうな",
+        "sus|怪しい、うさんくさい",
+        "rip-off|ぼったくり",
+        "bummer|残念なこと、がっかり",
+        "bs|でたらめ、嘘っぱち",
+        "wack|つまらない、おかしい",
+        "corny|ベタすぎる、ダサい",
+        "tacky|趣味が悪い、安っぽい",
+        "janky|ボロボロの、不安定な",
+        "shady|後ろ暗い、怪しい",
+        "dodgy|怪しい、危なっかしい",
+        "fishy|うさんくさい、怪しい",
+        "mid|微妙、普通以下",
+        "meh|イマイチ、どっちでもいい",
+        "basic|ありきたり、ミーハーな",
+        "flop|大失敗、コケること",
+        "trainwreck|大惨事、目も当てられない失敗",
+        "hot mess|めちゃくちゃな状態",
+        "yikes|うわっ、ひぇっ",
+        "oof|うわ、痛そう・気まずい",
+        "pathetic|情けない、哀れな",
+        "toxic|有害な、毒になる",
+        "petty|器が小さい、根に持つ",
+        "snob|気取り屋",
+        "karen|クレーマー気質の人",
+        // 3. 驚き・衝撃（30語）
+        "no way|まさか、ありえない",
+        "for real|マジで、本当に",
+        "bruh|おいおい、マジかよ",
+        "shook|衝撃を受けた、動揺した",
+        "mind-blowing|度肝を抜くような",
+        "insane|ヤバい、信じられないほどすごい",
+        "wild|クレイジーな、すごい",
+        "plot twist|予想外の展開",
+        "out of the blue|突然、予期せず",
+        "holy cow|なんてこった、驚き",
+        "what on earth|一体全体なんだ",
+        "shut up|うそでしょ、まさか",
+        "get out of here|まさか、冗談でしょ",
+        "are you kidding me|冗談だろ、ありえない",
+        "unbelievable|信じられない",
+        "unreal|現実離れした、すごい",
+        "nuts|クレイジーな、ありえない",
+        "bonkers|頭がおかしい、狂乱した",
+        "bananas|クレイジーな、熱狂した",
+        "off the hook|最高に盛り上がった、狂った",
+        "out of this world|この世のものとは思えないほどすごい",
+        "jaw-dropping|あんぐりするほど驚く",
+        "eye-opening|目からウロコの",
+        "game-changer|流れを一変させるもの",
+        "bombshell|爆弾発言、衝撃のニュース",
+        "shocker|衝撃的な出来事",
+        "whoa|おっと、わあ",
+        "dang|ちぇっ、すごいな",
+        "gosh|おやまあ、なんてことだ",
+        "good grief|やれやれ、まったく",
+        // 4. 感情・メンタル（30語）
+        "chill|まったりする、冷静な",
+        "hyped|ワクワクして興奮した",
+        "stoked|大興奮した、超嬉しい",
+        "salty|イライラした、根に持つ",
+        "hangry|空腹でイライラしている",
+        "bummed|がっかりした",
+        "gutted|ひどくがっかりして",
+        "freak out|パニックになる、激怒する",
+        "fomo|取り残される恐怖",
+        "vibe|雰囲気、ノリ",
+        "pumped|気合が入った、ワクワクした",
+        "psyched|超ワクワクしている",
+        "ecstatic|有頂天の、大喜びの",
+        "over the moon|大喜びして",
+        "tickled|くすぐったいほど嬉しい",
+        "mellow|穏やかな、リラックスした",
+        "laid-back|のんびりした、気さくな",
+        "zen|心が落ち着いた状態",
+        "down|落ち込んでいる",
+        "blue|憂鬱な",
+        "crushed|打ちのめされた",
+        "devastated|ひどくショックを受けた",
+        "pissed|激怒している",
+        "mad|怒っている、すごい",
+        "ticked off|イラッとした",
+        "triggered|神経を逆なでされた",
+        "on edge|ピリピリしている",
+        "paranoia|被害妄想、疑心暗鬼",
+        "awkward|気まずい",
+        "cringey|気恥ずかしい",
+        // 5. 疲労・ストレス（30語）
+        "beat|くたくたに疲れた",
+        "knackered|くたくたに疲れた",
+        "shattered|ヘトヘトに疲れた",
+        "burnout|燃え尽き症候群",
+        "overwhelmed|圧倒された、手一杯の",
+        "stressed out|ストレスで参っている",
+        "zonked|バタンキューで寝落ちした",
+        "hit the hay|寝る、布団に入る",
+        "crash|急にお邪魔する、爆睡する",
+        "under the weather|体調が優れない",
+        "wiped out|疲れ切った",
+        "worn out|くたびれ果てた",
+        "drained|エネルギーが枯渇した",
+        "exhausted|疲れ果てた",
+        "fried|頭が疲れて働かない",
+        "burnt out|燃え尽きた",
+        "dead tired|死ぬほど疲れた",
+        "pooped|ヘトヘトになった",
+        "bushed|くたくたに疲れた",
+        "dog-tired|ひどく疲れた",
+        "zonked out|意識を失うほど寝た",
+        "pass out|気絶する、寝落ちする",
+        "doze off|うとうとする",
+        "catnap|短い昼寝",
+        "power nap|短時間の仮眠",
+        "hangover|二日酔い",
+        "jet-lagged|時差ボケの",
+        "swamped|仕事などで手一杯の",
+        "snowed under|仕事に埋もれている",
+        "at wit's end|途方に暮れて",
+        // 6. お金・仕事（30語）
+        "broke|金欠の、一文無しの",
+        "loaded|大金持ちの",
+        "bread|お金、稼ぎ",
+        "buck|1ドル、お金",
+        "grand|1000ドル",
+        "hustle|精力的に働く、稼ぐ",
+        "grind|地道な努力、激務",
+        "side gig|副業",
+        "splurge|贅沢に散財する",
+        "freebie|タダでもらえるもの",
+        "dough|お金、現金",
+        "cash|現金",
+        "moolah|お金",
+        "Benjamins|100ドル札、大金",
+        "penny-pincher|けちんぼ",
+        "cheapskate|ドケチ",
+        "stingy|けちな",
+        "generous|気前の良い",
+        "pricey|値段が高い",
+        "steep|法外に高い",
+        "dirt cheap|二束三文、激安の",
+        "steal|掘り出し物、お買い得",
+        "chip in|お金を出し合う",
+        "split the bill|割り勘にする",
+        "treat|おごり、ご褒美",
+        "on the house|店のおごりで、無料で",
+        "9-to-5|定時勤務の仕事",
+        "day job|本業",
+        "side hustle|副業",
+        "slack off|サボる、手を抜く",
+        // 7. 恋愛・人間関係（30語）
+        "crush|片思いの相手",
+        "bestie|大親友",
+        "homie|地元の仲間、親友",
+        "squad|仲良しグループ",
+        "bromance|男同士の熱い友情",
+        "frenemy|友を装った敵",
+        "ghost|急に音信不通にする",
+        "red flag|危険信号、地雷要素",
+        "dump|振る、捨てる",
+        "hang out|ぶらぶら過ごす",
+        "bae|恋人、大切な人",
+        "boo|恋人、ダーリン",
+        "soulmate|運命の人",
+        "significant other|恋人・配偶者",
+        "fiance|婚約者",
+        "ex|元恋人",
+        "fling|ひとときの恋、火遊び",
+        "situationship|恋人未満の曖昧な関係",
+        "friendzone|友達止まりにする",
+        "chemistry|相性の良さ",
+        "vibe with|気が合う",
+        "hit it off|初対面で意気投合する",
+        "click|ウマが合う",
+        "third wheel|デートの邪魔者",
+        "wingman|恋のキューピッド役",
+        "simp|好きな人に尽くしすぎる人",
+        "rizz|異性を惹きつける魅力",
+        "green flag|安心できる良いサイン",
+        "ick|急に冷めるポイント",
+        "breadcrumbing|気を持たせる連絡だけすること",
+        // 8. 会話・相槌（30語）
+        "bet|了解、いいね、間違いない",
+        "my bad|ごめん、私のミス",
+        "no worries|大丈夫、気にしないで",
+        "same|同じく、わかる",
+        "mood|わかる、今の気分",
+        "tea|噂話、ゴシップ",
+        "spill the tea|ゴシップ・秘密を話す",
+        "cap|嘘、見栄を張る",
+        "no cap|嘘偽りなく、マジで",
+        "in a nutshell|要するに、一言で言うと",
+        "fair enough|なるほど、もっともだ",
+        "makes sense|納得がいく、理にかなっている",
+        "gotcha|わかった、了解",
+        "you bet|もちろん、どういたしまして",
+        "no biggie|大したことないよ",
+        "beats me|さっぱりわからない",
+        "search me|私に聞かないで、知らない",
+        "long story short|手短に言うと",
+        "bottom line|要点は、結論として",
+        "to be honest|正直に言うと",
+        "low-key|ひそかに、ちょっと",
+        "high-key|公然と、かなり",
+        "deadass|マジで、本当に",
+        "fr|マジで（for real）",
+        "idk|知らない（I don't know）",
+        "imo|個人的な意見では",
+        "tbh|正直なところ",
+        "fyi|参考までに",
+        "brb|すぐ戻る",
+        "ttyl|またあとで話そう",
+        // 9. SNS・ネットスラング（30語）
+        "flex|自慢する、見せびらかす",
+        "clout|影響力、知名度",
+        "stan|熱狂的なファン、推す",
+        "troll|ネット荒らし、からかう",
+        "lurk|ROMる、こっそり見る",
+        "binge-watch|一気見する",
+        "dm|ダイレクトメッセージを送る",
+        "viral|バズった、急速に広まった",
+        "meme|ネット上のネタ画像・動画",
+        "cancel|ボイコットする、炎上して干す",
+        "post|投稿する",
+        "story|24時間で消える投稿",
+        "reel|ショート動画",
+        "feed|タイムライン",
+        "algorithm|おすすめ表示の仕組み",
+        "trending|トレンド入りしている",
+        "hashtag|ハッシュタグ",
+        "tag|タグ付けする",
+        "mention|メンションする",
+        "selfie|自撮り",
+        "photobomb|写真にわざと写り込む",
+        "catfish|ネット上で別人になりすます",
+        "clickbait|釣りタイトル・サムネ",
+        "spam|迷惑メッセージ",
+        "mute|ミュートする",
+        "block|ブロックする",
+        "unfollow|フォローを外す",
+        "shadowban|密かに表示制限されること",
+        "ratio|リプライのいいね数が元投稿を上回ること",
+        "doomscroll|暗いニュースを延々と見続けること",
+        // 10. 行動・トラブル（30語）
+        "bail|ドタキャンする、抜け出す",
+        "ditch|すっぽかす、捨てる",
+        "flake|ドタキャンする人",
+        "screw up|大失敗する",
+        "mess up|台無しにする",
+        "wing it|ぶっつけ本番でやる",
+        "call it a day|今日はこれでおしまいにする",
+        "take a rain check|また今度にする",
+        "piece of cake|朝飯前、超簡単",
+        "yolo|人生一度きり",
+        "blow off|すっぽかす、無視する",
+        "stand up|デートなどをすっぽかす",
+        "show up|現れる、参加する",
+        "drop by|ちょっと立ち寄る",
+        "hang tight|そのまま待っている",
+        "hold on|ちょっと待つ",
+        "chill out|落ち着く",
+        "calm down|冷静になる",
+        "lighten up|気楽にする、深刻にならない",
+        "cut it out|いい加減にやめる",
+        "knock it off|やめろ、いい加減にしろ",
+        "back off|手を引く、下がる",
+        "mess around|ふざける、いじくり回す",
+        "goof off|ブラブラして時間を潰す",
+        "procrastinate|先延ばしにする",
+        "pull an all-nighter|徹夜する",
+        "cram|一夜漬けで詰め込む",
+        "ace a test|テストで満点・高得点を取る",
+        "bomb a test|テストで爆死する",
+        "wrap up|仕上げる、締めくくる"
+      ].join("\n");
+
+      // パイプ区切り文字列を単語配列にパース
+      function parseRawWords(raw, prefix) {
+        return raw
+          .trim()
+          .split("\n")
+          .map((line, i) => {
+            const sep = line.indexOf("|");
+            const en = sep >= 0 ? line.slice(0, sep).trim() : line.trim();
+            const ja = sep >= 0 ? line.slice(sep + 1).trim() : "";
+            return {
+              id: `${prefix}_${i + 1}`,
+              index: i + 1,
+              en,
+              ja
+            };
+          });
+      }
+
+      const TOPIC_DATA = {
+        eiken: {
+          key: "eiken",
+          title: "英検準1級",
+          storageKey: "vocab_status_eiken_50_semantic_v1",
+          words: parseRawWords(EIKEN_RAW, "eiken")
+        },
+        ielts: {
+          key: "ielts",
+          title: "IELTS",
+          storageKey: "vocab_status_ielts_50_semantic_v1",
+          words: parseRawWords(IELTS_RAW, "ielts")
+        },
+        slang: {
+          key: "slang",
+          title: "英語スラング",
+          storageKey: "vocab_status_slang_300_semantic_v1",
+          words: parseRawWords(SLANG_RAW, "slang")
+        }
+      };
+
+      const BATCH_SIZE = 10;
+      const FULL_SESSION_LIMIT = 100;
+
+      // アプリ状態（既定はすべて 'unknown' = ×）
+      const state = {
+        screen: "topics", // 'topics' | 'menu' | 'study'
+        topicKey: "eiken",
+        statusByTopic: {
+          eiken: {},
+          ielts: {},
+          slang: {}
+        },
+        listFilter: "all", // 'all' | 'known' | 'unknown'
+        studyMode: "full", // 'full' | 'unknown'
+        sessionWords: [],
+        setIndex: 0,
+        flippedIds: new Set(),
+        soundEnabled: true,
+        resetArmed: false
+      };
+
+      let audioCtx = null;
+      let toastTimer = null;
+      let resetTimer = null;
+
+      // DOM要素
+      const dom = {
+        backBtn: document.getElementById("backBtn"),
+        headerTitle: document.getElementById("headerTitle"),
+        headerProgress: document.getElementById("headerProgress"),
+        soundToggleBtn: document.getElementById("soundToggleBtn"),
+        resetBtn: document.getElementById("resetBtn"),
+        toast: document.getElementById("toast"),
+        topicScreen: document.getElementById("topicScreen"),
+        menuScreen: document.getElementById("menuScreen"),
+        studyScreen: document.getElementById("studyScreen"),
+        eikenTopicBtn: document.getElementById("eikenTopicBtn"),
+        ieltsTopicBtn: document.getElementById("ieltsTopicBtn"),
+        slangTopicBtn: document.getElementById("slangTopicBtn"),
+        eikenOkCount: document.getElementById("eikenOkCount"),
+        eikenNgCount: document.getElementById("eikenNgCount"),
+        ieltsOkCount: document.getElementById("ieltsOkCount"),
+        ieltsNgCount: document.getElementById("ieltsNgCount"),
+        slangOkCount: document.getElementById("slangOkCount"),
+        slangNgCount: document.getElementById("slangNgCount"),
+        menuOkCount: document.getElementById("menuOkCount"),
+        menuNgCount: document.getElementById("menuNgCount"),
+        fullModeBtn: document.getElementById("fullModeBtn"),
+        unknownModeBtn: document.getElementById("unknownModeBtn"),
+        listTitle: document.getElementById("listTitle"),
+        filterAllBtn: document.getElementById("filterAllBtn"),
+        filterOkBtn: document.getElementById("filterOkBtn"),
+        filterNgBtn: document.getElementById("filterNgBtn"),
+        wordList: document.getElementById("wordList"),
+        cardsGrid: document.getElementById("cardsGrid"),
+        flipAllBtn: document.getElementById("flipAllBtn"),
+        nextBtn: document.getElementById("nextBtn")
+      };
+
+      function showToast(message) {
+        dom.toast.textContent = message;
+        dom.toast.classList.remove("hidden");
+        if (toastTimer) clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => {
+          dom.toast.classList.add("hidden");
+        }, 2600);
+      }
+
+      // カードめくり効果音（Web Audio API）
+      function playFlipSound(toBack) {
+        if (!state.soundEnabled) return;
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextClass) return;
+
+        try {
+          if (!audioCtx) {
+            audioCtx = new AudioContextClass();
+          }
+          if (audioCtx.state === "suspended") {
+            audioCtx.resume();
+          }
+
+          const now = audioCtx.currentTime;
+          const duration = 0.065;
+
+          // 軽い紙擦れノイズ
+          const bufferSize = Math.floor(audioCtx.sampleRate * duration);
+          const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+          const data = buffer.getChannelData(0);
+          for (let i = 0; i < bufferSize; i++) {
+            const env = Math.sin((i / bufferSize) * Math.PI);
+            data[i] = (Math.random() * 2 - 1) * env * 0.28;
+          }
+
+          const noise = audioCtx.createBufferSource();
+          noise.buffer = buffer;
+
+          const filter = audioCtx.createBiquadFilter();
+          filter.type = "bandpass";
+          filter.frequency.setValueAtTime(toBack ? 1900 : 1450, now);
+          filter.Q.value = 1.6;
+
+          const gain = audioCtx.createGain();
+          gain.gain.setValueAtTime(0.001, now);
+          gain.gain.linearRampToValueAtTime(0.14, now + 0.012);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+          noise.connect(filter);
+          filter.connect(gain);
+          gain.connect(audioCtx.destination);
+
+          noise.start(now);
+          noise.stop(now + duration);
+        } catch (e) {
+          // 音声再生不可時は無視
+        }
+      }
+
+      function getTopicCounts(topicKey) {
+        const words = TOPIC_DATA[topicKey].words;
+        const map = state.statusByTopic[topicKey];
+        let known = 0;
+        for (let i = 0; i < words.length; i++) {
+          if (map[words[i].id] === "known") known++;
+        }
+        return {
+          known,
+          unknown: words.length - known,
+          total: words.length
+        };
+      }
+
+      // localStorage からの読み込み・保存
+      function loadStatuses() {
+        Object.keys(TOPIC_DATA).forEach((key) => {
+          const topic = TOPIC_DATA[key];
+          let saved = {};
+          try {
+            const raw = localStorage.getItem(topic.storageKey);
+            if (raw) {
+              saved = JSON.parse(raw) || {};
+            }
+          } catch (e) {
+            saved = {};
+          }
+          const map = {};
+          topic.words.forEach((w) => {
+            map[w.id] = saved[w.id] === "known" ? "known" : "unknown";
+          });
+          state.statusByTopic[key] = map;
+        });
+      }
+
+      function saveTopicStatus(topicKey) {
+        try {
+          localStorage.setItem(
+            TOPIC_DATA[topicKey].storageKey,
+            JSON.stringify(state.statusByTopic[topicKey])
+          );
+        } catch (e) {
+          // ストレージ制限時は無視
+        }
+      }
+
+      function shuffle(arr) {
+        const copy = arr.slice();
+        for (let i = copy.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          const t = copy[i];
+          copy[i] = copy[j];
+          copy[j] = t;
+        }
+        return copy;
+      }
+
+      function disarmReset() {
+        state.resetArmed = false;
+        if (resetTimer) {
+          clearTimeout(resetTimer);
+          resetTimer = null;
+        }
+        dom.resetBtn.textContent = "履歴リセット";
+        dom.resetBtn.classList.remove("armed");
+      }
+
+      function handleReset() {
+        if (!state.resetArmed) {
+          state.resetArmed = true;
+          dom.resetBtn.textContent = "本当にリセット？";
+          dom.resetBtn.classList.add("armed");
+          resetTimer = setTimeout(disarmReset, 3200);
+          return;
+        }
+        disarmReset();
+        const key = state.topicKey;
+        const map = state.statusByTopic[key];
+        TOPIC_DATA[key].words.forEach((w) => {
+          map[w.id] = "unknown";
+        });
+        saveTopicStatus(key);
+        renderMenu();
+        showToast("すべて×にリセットしました");
+      }
+
+      // 単語の○/×設定
+      function setWordStatus(wordId, nextStatus) {
+        const key = state.topicKey;
+        if (state.statusByTopic[key][wordId] === nextStatus) return;
+        state.statusByTopic[key][wordId] = nextStatus;
+        saveTopicStatus(key);
+
+        if (state.screen === "menu") {
+          renderMenu();
+        } else if (state.screen === "study") {
+          updateStudyCardStatus(wordId);
+        }
+      }
+
+      // 画面遷移
+      function switchScreen(screen) {
+        state.screen = screen;
+        disarmReset();
+
+        dom.topicScreen.classList.toggle("hidden", screen !== "topics");
+        dom.menuScreen.classList.toggle("hidden", screen !== "menu");
+        dom.studyScreen.classList.toggle("hidden", screen !== "study");
+
+        if (screen === "topics") {
+          dom.backBtn.classList.add("hidden");
+          dom.headerProgress.classList.add("hidden");
+          dom.soundToggleBtn.classList.add("hidden");
+          dom.resetBtn.classList.add("hidden");
+          dom.headerTitle.textContent = "英単語フラッシュカード";
+          renderTopicScreen();
+        } else if (screen === "menu") {
+          dom.backBtn.classList.remove("hidden");
+          dom.backBtn.textContent = "← トピック選択";
+          dom.headerProgress.classList.add("hidden");
+          dom.soundToggleBtn.classList.add("hidden");
+          dom.resetBtn.classList.remove("hidden");
+          dom.headerTitle.textContent = TOPIC_DATA[state.topicKey].title;
+          renderMenu();
+        } else if (screen === "study") {
+          dom.backBtn.classList.remove("hidden");
+          dom.backBtn.textContent = "← メニュー";
+          dom.headerProgress.classList.remove("hidden");
+          dom.soundToggleBtn.classList.remove("hidden");
+          dom.resetBtn.classList.add("hidden");
+          dom.headerTitle.textContent =
+            state.studyMode === "full" ? "総復習モード" : "覚えてないもの復習モード";
+          renderStudySet();
+        }
+      }
+
+      // ==================== 1. トピック選択画面描画 ====================
+      function renderTopicScreen() {
+        const ek = getTopicCounts("eiken");
+        dom.eikenOkCount.textContent = String(ek.known);
+        dom.eikenNgCount.textContent = String(ek.unknown);
+
+        const ie = getTopicCounts("ielts");
+        dom.ieltsOkCount.textContent = String(ie.known);
+        dom.ieltsNgCount.textContent = String(ie.unknown);
+
+        const sl = getTopicCounts("slang");
+        dom.slangOkCount.textContent = String(sl.known);
+        dom.slangNgCount.textContent = String(sl.unknown);
+      }
+
+      // ==================== 2. メニュー画面描画 ====================
+      function renderMenu() {
+        const key = state.topicKey;
+        const topic = TOPIC_DATA[key];
+        const map = state.statusByTopic[key];
+        const counts = getTopicCounts(key);
+
+        dom.menuOkCount.textContent = String(counts.known);
+        dom.menuNgCount.textContent = String(counts.unknown);
+        dom.listTitle.textContent = `全${counts.total}語リスト（意味順）`;
+
+        dom.filterAllBtn.textContent = `すべて (${counts.total})`;
+        dom.filterOkBtn.textContent = `○ 覚えた (${counts.known})`;
+        dom.filterNgBtn.textContent = `× 覚えてない (${counts.unknown})`;
+
+        [dom.filterAllBtn, dom.filterOkBtn, dom.filterNgBtn].forEach((btn) => {
+          btn.classList.toggle("active", btn.dataset.filter === state.listFilter);
+        });
+
+        const filtered = topic.words.filter((w) => {
+          const st = map[w.id];
+          if (state.listFilter !== "all" && st !== state.listFilter) return false;
+          return true;
+        });
+
+        dom.wordList.innerHTML = "";
+        const frag = document.createDocumentFragment();
+
+        filtered.forEach((w) => {
+          const st = map[w.id];
+          const li = document.createElement("li");
+          li.className = "word-row";
+
+          const info = document.createElement("div");
+          info.className = "word-info";
+
+          const enDiv = document.createElement("div");
+          enDiv.className = "word-en";
+          const idxSpan = document.createElement("span");
+          idxSpan.className = "word-idx";
+          idxSpan.textContent = `${w.index}.`;
+          enDiv.appendChild(idxSpan);
+          enDiv.appendChild(document.createTextNode(w.en));
+
+          const jaDiv = document.createElement("div");
+          jaDiv.className = "word-ja";
+          jaDiv.textContent = w.ja;
+
+          info.appendChild(enDiv);
+          info.appendChild(jaDiv);
+
+          const toggles = document.createElement("div");
+          toggles.className = "row-toggles";
+
+          const okBtn = document.createElement("button");
+          okBtn.type = "button";
+          okBtn.className = `toggle-btn ok${st === "known" ? " active" : ""}`;
+          okBtn.textContent = "○";
+          okBtn.setAttribute("aria-label", `${w.en} を○にする`);
+          okBtn.addEventListener("click", () => setWordStatus(w.id, "known"));
+
+          const ngBtn = document.createElement("button");
+          ngBtn.type = "button";
+          ngBtn.className = `toggle-btn ng${st === "unknown" ? " active" : ""}`;
+          ngBtn.textContent = "×";
+          ngBtn.setAttribute("aria-label", `${w.en} を×にする`);
+          ngBtn.addEventListener("click", () => setWordStatus(w.id, "unknown"));
+
+          toggles.appendChild(okBtn);
+          toggles.appendChild(ngBtn);
+
+          li.appendChild(info);
+          li.appendChild(toggles);
+          frag.appendChild(li);
+        });
+
+        dom.wordList.appendChild(frag);
+      }
+
+      // ==================== 3. 学習モード開始・進行 ====================
+      function startStudySession(mode) {
+        const key = state.topicKey;
+        const allWords = TOPIC_DATA[key].words;
+        const map = state.statusByTopic[key];
+
+        if (mode === "full") {
+          state.sessionWords = shuffle(allWords).slice(0, FULL_SESSION_LIMIT);
+        } else {
+          const unknownWords = allWords.filter((w) => map[w.id] === "unknown");
+          if (unknownWords.length === 0) {
+            showToast("×の単語がありません");
+            return;
+          }
+          state.sessionWords = shuffle(unknownWords);
+        }
+
+        state.studyMode = mode;
+        state.setIndex = 0;
+        state.flippedIds.clear();
+        switchScreen("study");
+      }
+
+      function getTotalSets() {
+        return Math.max(1, Math.ceil(state.sessionWords.length / BATCH_SIZE));
+      }
+
+      function getCurrentBatch() {
+        const start = state.setIndex * BATCH_SIZE;
+        return state.sessionWords.slice(start, start + BATCH_SIZE);
+      }
+
+      function renderStudySet() {
+        const key = state.topicKey;
+        const map = state.statusByTopic[key];
+        const totalSets = getTotalSets();
+        const batch = getCurrentBatch();
+
+        dom.headerProgress.textContent = `${state.setIndex + 1} / ${totalSets} セット (全${state.sessionWords.length}語)`;
+        dom.cardsGrid.innerHTML = "";
+
+        const frag = document.createDocumentFragment();
+
+        batch.forEach((word) => {
+          const st = map[word.id];
+          const isFlipped = state.flippedIds.has(word.id);
+
+          const card = document.createElement("div");
+          card.className = `flash-card ${st === "known" ? "is-known" : "is-unknown"}`;
+          card.dataset.wordId = word.id;
+
+          const face = document.createElement("div");
+          face.className = `card-face${isFlipped ? " is-flipped" : ""}`;
+          face.setAttribute("role", "button");
+          face.setAttribute("tabindex", "0");
+
+          const inner = document.createElement("div");
+          inner.className = "card-inner";
+
+          const frontSide = document.createElement("div");
+          frontSide.className = "card-side front";
+          const enEl = document.createElement("div");
+          enEl.className = "face-en";
+          enEl.textContent = word.en;
+          frontSide.appendChild(enEl);
+
+          const backSide = document.createElement("div");
+          backSide.className = "card-side back";
+          const jaEl = document.createElement("div");
+          jaEl.className = "face-ja";
+          jaEl.textContent = word.ja;
+          backSide.appendChild(jaEl);
+
+          inner.appendChild(frontSide);
+          inner.appendChild(backSide);
+          face.appendChild(inner);
+
+          face.addEventListener("click", () => {
+            if (state.flippedIds.has(word.id)) {
+              state.flippedIds.delete(word.id);
+              face.classList.remove("is-flipped");
+              playFlipSound(false);
+            } else {
+              state.flippedIds.add(word.id);
+              face.classList.add("is-flipped");
+              playFlipSound(true);
+            }
+          });
+
+          const actions = document.createElement("div");
+          actions.className = "card-actions";
+
+          const okBtn = document.createElement("button");
+          okBtn.type = "button";
+          okBtn.className = `grade-btn ok${st === "known" ? " active" : ""}`;
+          okBtn.textContent = "○";
+          okBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            setWordStatus(word.id, "known");
+          });
+
+          const ngBtn = document.createElement("button");
+          ngBtn.type = "button";
+          ngBtn.className = `grade-btn ng${st === "unknown" ? " active" : ""}`;
+          ngBtn.textContent = "×";
+          ngBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            setWordStatus(word.id, "unknown");
+          });
+
+          actions.appendChild(okBtn);
+          actions.appendChild(ngBtn);
+
+          card.appendChild(face);
+          card.appendChild(actions);
+          frag.appendChild(card);
+        });
+
+        dom.cardsGrid.appendChild(frag);
+      }
+
+      function updateStudyCardStatus(wordId) {
+        const st = state.statusByTopic[state.topicKey][wordId];
+        const card = dom.cardsGrid.querySelector(`[data-word-id="${wordId}"]`);
+        if (!card) return;
+
+        card.className = `flash-card ${st === "known" ? "is-known" : "is-unknown"}`;
+        const okBtn = card.querySelector(".grade-btn.ok");
+        const ngBtn = card.querySelector(".grade-btn.ng");
+        if (okBtn) okBtn.className = `grade-btn ok${st === "known" ? " active" : ""}`;
+        if (ngBtn) ngBtn.className = `grade-btn ng${st === "unknown" ? " active" : ""}`;
+      }
+
+      function handleFlipAll() {
+        const batch = getCurrentBatch();
+        const allFlipped = batch.length > 0 && batch.every((w) => state.flippedIds.has(w.id));
+        const faces = dom.cardsGrid.querySelectorAll(".card-face");
+
+        if (allFlipped) {
+          state.flippedIds.clear();
+          faces.forEach((el) => el.classList.remove("is-flipped"));
+          playFlipSound(false);
+        } else {
+          batch.forEach((w) => state.flippedIds.add(w.id));
+          faces.forEach((el) => el.classList.add("is-flipped"));
+          playFlipSound(true);
+        }
+      }
+
+      function handleNext() {
+        const totalSets = getTotalSets();
+        if (state.setIndex >= totalSets - 1) {
+          state.flippedIds.clear();
+          switchScreen("menu");
+          showToast("お疲れさまでした！メニューに戻ります");
+          return;
+        }
+        state.setIndex += 1;
+        state.flippedIds.clear();
+        renderStudySet();
+      }
+
+      // イベント設定
+      function bindEvents() {
+        dom.backBtn.addEventListener("click", () => {
+          if (state.screen === "study") {
+            switchScreen("menu");
+          } else if (state.screen === "menu") {
+            switchScreen("topics");
+          }
+        });
+
+        dom.resetBtn.addEventListener("click", handleReset);
+
+        dom.soundToggleBtn.addEventListener("click", () => {
+          state.soundEnabled = !state.soundEnabled;
+          dom.soundToggleBtn.textContent = state.soundEnabled ? "🔊" : "🔇";
+          dom.soundToggleBtn.classList.toggle("muted", !state.soundEnabled);
+          if (state.soundEnabled) {
+            playFlipSound(true);
+          }
+        });
+
+        dom.eikenTopicBtn.addEventListener("click", () => {
+          state.topicKey = "eiken";
+          state.listFilter = "all";
+          switchScreen("menu");
+        });
+
+        dom.ieltsTopicBtn.addEventListener("click", () => {
+          state.topicKey = "ielts";
+          state.listFilter = "all";
+          switchScreen("menu");
+        });
+
+        dom.slangTopicBtn.addEventListener("click", () => {
+          state.topicKey = "slang";
+          state.listFilter = "all";
+          switchScreen("menu");
+        });
+
+        dom.fullModeBtn.addEventListener("click", () => startStudySession("full"));
+        dom.unknownModeBtn.addEventListener("click", () => startStudySession("unknown"));
+
+        [dom.filterAllBtn, dom.filterOkBtn, dom.filterNgBtn].forEach((btn) => {
+          btn.addEventListener("click", () => {
+            state.listFilter = btn.dataset.filter;
+            renderMenu();
+          });
+        });
+
+        dom.flipAllBtn.addEventListener("click", handleFlipAll);
+        dom.nextBtn.addEventListener("click", handleNext);
+      }
+
+      // 起動
+      loadStatuses();
+      bindEvents();
+      switchScreen("topics");
+    })();
+  </script>
+</body>
+</html>
